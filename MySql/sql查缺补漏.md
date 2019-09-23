@@ -203,12 +203,284 @@ SELECT * FROM employee LIMIT (curPage - 1) * pageSize,pageSize;
 
 表中的一行(一条记录)代表一个实体（entity）
 
+- 主键约束
+- 唯一约束
+- 自动增长列
+
 ## 2.2域完整性
 
-使用
-
-
-域完整性约束
+- 数据类型
+- 非空约束
+- 默认值约束
 
 ## 2.3参照完整性
+
+表与表之间对应的一种关系
+
+# 3.多表查询
+
+## 3.1合并结果集
+
+**什么是合并结果集**
+
+就是把两个select语句的查询结果合并到一起
+
+**合并结果集的两种方式**
+
+- UNION  合并时去除重复记录
+- UNION ALL 合并时不去出重复记录
+
+**格式**
+
+```
+SELECT * FROM 表1 UNION SELECT * FROM 表2；
+SELECT * FROM 表1 UNION ALL SELECT * FROM 表2;
+```
+
+## 3.2连接查询
+
+**什么是连接查询**
+
+从多个表查询数据
+
+**什么是笛卡尔集**
+
+同时查询两个表就会出现笛卡尔集结果
+
+```sql
+SELECT * FROM stu,score;
+```
+
+**查询时给表起别名**
+
+```sql
+SELECT * FROM stu st,score sc;
+```
+
+**多表查询如何保证数据正确**
+
+在查询时主键和外键保持一致
+
+```sql
+SELECT * FROM stu st,score sc WHERE st.id = sc.id;
+```
+
+**原理**
+
+逐行判断，相等的留下，不相等的不要
+
+## 3.3根据连接方式分类
+
+### 3.3.1内连接
+
+- 等值连接查询
+
+  ```sql
+  SELECT * FROM t_student st,score sc WHERE st.sid = sc.sid -- 99查询
+  SELECT * FROM t_student st INNER JOIN score sc ON st.sid = sc.sid -- 内连接
+  SELECT * FROM t_student st JOIN score sc ON st.sid = sc.sid -- 内连接 INNER可以省略不写
+  SELECT * FROM t_student st INNER JOIN score sc ON st.sid = sc.sid WHERE sc.score > 70 -- 可以继续在后面加条件
+  SELECT st.`name`,st.sex,sc.score FROM t_student st INNER JOIN score sc ON st.sid = sc.sid WHERE sc.score > 70 -- 只显示姓名，成绩
+  SELECT st.`name`,st.sex,sc.score FROM t_student st INNER JOIN score sc ON st.sid = sc.sid WHERE sc.score > 70 AND st.sex = '男' -- WHERE后可以加多个条件
+  ```
+
+- 多表连接查询
+
+  ```sql
+   -- 多表联查 99查询
+  SELECT st.`name`,sc.score,fd.xueke from t_student st,score sc,find fd WHERE st.sid = sc.sid AND sc.cid = fd.cid
+  
+  -- 多表联查 内连接查询
+  SELECT st.`name`,sc.score,fd.xueke FROM t_student st
+  JOIN score sc
+  ON st.sid = sc.sid
+  JOIN find fd
+  ON sc.cid = fd.cid 
+  ```
+
+  ![1569208989649](F:\GitSpace\sqlStudy\src\imgs\1569208989649.png)
+
+- 非等值连接查询
+
+  ```sql
+  -- 查询员工姓名，工资，部门，工资等级 99查询
+  SELECT e.ename,e.salary,d.dname,s.grade FROM emp e,salgrade s,dept d
+  WHERE e.deptno = d.deptno
+  AND e.salary >= s.lowSalary and e.salary <= s.highSalary
+  
+  -- 内链接查询
+  SELECT e.ename,e.salary,d.dname,s.grade 
+  FROM emp e
+  JOIN dept d
+  ON e.deptno = d.deptno
+  JOIN salgrade s
+  ON e.salary >= s.lowSalary and e.salary <= s.highSalary
+  ```
+
+  
+
+- 自连接查询
+
+### 3.3.2外连接
+
+- 左外连接   左边的表忽视条件全部查出来，右边的表只有符合条件的才能查出来
+
+  ```sql
+  SELECT * from t_student st LEFT OUTER JOIN score sc ON st.sid = sc.sid -- 左外连接
+  ```
+
+- 右外连接  右边的表忽视条件全部查出来，左边的表只有符合条件的才能查出来
+
+  ```sql
+  SELECT * from t_student st RIGHT OUTER JOIN score sc ON st.sid = sc.sid -- 右外连接
+  ```
+
+### 3.3.2自然连接
+
+自动去除笛卡尔集，但是两个表的结构必须一致
+
+```sql
+SELECT * FROM 表1 NATURAL JOIN 表2 
+```
+
+# 4.子查询
+
+## 4.1子查询WHERE&&FROM条件查询
+
+**什么时子查询**
+
+一个select语句中包含另一个完整的select语句。
+
+或两个以上SELECT，那么就是子查询语句了。
+
+**子查询出现的位置**
+
+- where后，把select查询出的结果当作另一个select的条件值
+
+  ```sql
+  -- 查询和项羽同一个部门的员工姓名
+  SELECT e.deptno FROM emp e WHERE e.ename = '项羽'
+  
+  -- 把上一个表的结果作为另一个表的条件
+  SELECT e.ename 
+  FROM emp e 
+  WHERE e.deptno = (SELECT e.deptno FROM emp e WHERE e.ename = '项羽');
+  ```
+
+- from后，把查询出的结果当作一个新表；
+
+  ```sql
+  -- 查出部门在30的 员工姓名，工资，且工资大于1200
+  SELECT e.ename,e.salary FROM emp e WHERE e.deptno = 30
+   
+  -- 把上面的查询语句的结果作为新得表在筛选 工资大于1200
+  SELECT n.ename,n.salary 
+  FROM (SELECT e.ename,e.salary FROM emp e WHERE e.deptno = 30) n 
+  WHERE n.salary > 1200
+  ```
+
+  
+
+**练习1**
+
+```sql
+-- 练习1 查询工资高于程咬金得员工
+-- 先查出程咬金得工资
+SELECT e.salary FROM emp e WHERE e.ename = '程咬金'
+-- 再把程咬金得工资作为条件
+SELECT * FROM emp e 
+WHERE e.salary > (SELECT e.salary FROM emp e WHERE e.ename = '程咬金')
+```
+
+**练习2**
+
+```sql
+-- 练习2 查询出工资高于30号部门的员工信息
+-- 先查出部门为30号的最高工资
+SELECT MAX(e.salary) FROM emp e WHERE e.deptno = 30
+-- 再把结果作为条件
+SELECT * FROM emp e WHERE e.salary > (SELECT MAX(e.salary) FROM emp e WHERE e.deptno = 30)
+
+```
+
+**练习3**
+
+```sql
+-- 查询工作和薪资都和妲己一样的员工信息
+SELECT e.job,e.salary FROM emp e WHERE e.ename = '妲己' -- 销售 7698
+-- 把结果作为条件
+SELECT * FROM emp e WHERE (e.job,e.salary) in (SELECT e.job,e.salary FROM emp e WHERE e.ename = '妲己')
+
+SELECT * 
+FROM emp e,(SELECT e.job,e.salary FROM emp e WHERE e.ename = '妲己') r
+WHERE e.job = r.job AND e.salary = r.salary
+```
+
+![1569224187693](F:\GitSpace\sqlStudy\src\imgs\1569224187693.png)
+
+**练习4**
+
+```sql
+-- 有两个以上下属的员工
+SELECT e.mgr FROM emp e GROUP BY mgr HAVING COUNT(e.mgr) > 2
+
+SELECT * FROM emp e
+WHERE e.empno in (SELECT e.mgr FROM emp e GROUP BY mgr HAVING COUNT(e.mgr) > 2)
+```
+
+![1569225121695](F:\GitSpace\sqlStudy\src\imgs\1569225121695.png)
+
+**练习5**
+
+```sql
+-- 查询员工编号为7788的姓名，工资，部门，部门地址
+SELECT e.ename,e.salary,d.dname,d.local 
+FROM emp e,dept d 
+WHERE e.deptno = d.deptno AND e.empno = 7788
+```
+
+![1569225490498](F:\GitSpace\sqlStudy\src\imgs\1569225490498.png)
+
+## 4.2自连接
+
+自连接：自己连接自己，起别名
+
+```sql
+-- 自连接
+-- 查询编号为7369的姓名及上司的编号和姓名
+SELECT e1.empno,e1.ename,e2.empno,e2.ename FROM emp e1,emp e2
+WHERE e1.mgr = e2.empno AND e1.empno = 7369
+```
+
+![1569226276384](F:\GitSpace\sqlStudy\src\imgs\1569226276384.png)
+
+# 5.常用函数
+
+**函数介绍**
+
+事先提供好的一些功能可以直接使用
+
+函数可以用在SELECT语句及其子句
+
+也可以用在UPDATE,DELETE语句当中。
+
+**函数分类**
+
+- 字符串函数
+- 数值函数
+- 日期时间函数
+- 流程函数
+- 其他函数
+
+# 6.事务
+
+# 7.权限操作
+
+# 8.视图
+
+# 9.存储过程
+
+# 10.自定义函数
+
+# 11.索引
 
